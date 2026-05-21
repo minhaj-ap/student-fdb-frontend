@@ -3,16 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { GetFeedback, UpdateFeedbackStatus } from "@/src/lib/feedback";
 import { Feedback } from "@/types";
+import { Star } from "lucide-react";
 
 type StatusFilter = Feedback["status"] | "all";
 type CategoryFilter = Feedback["category"] | "all";
 type SortOption = "newest" | "oldest" | "rating-high" | "rating-low" | "status";
-
-const statusStyles: Record<Feedback["status"], string> = {
-  pending: "bg-amber-50 text-amber-700 ring-amber-200",
-  reviewed: "bg-sky-50 text-sky-700 ring-sky-200",
-  resolved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-};
 
 const categoryLabels: Record<Feedback["category"], string> = {
   academics: "Academic",
@@ -29,13 +24,15 @@ const statusLabels: Record<Feedback["status"], string> = {
 
 const statusOptions: Feedback["status"][] = ["pending", "reviewed", "resolved"];
 
+const statusBadge: Record<Feedback["status"], string> = {
+  pending: "bg-amber-100 text-amber-800",
+  reviewed: "bg-sky-100 text-sky-800",
+  resolved: "bg-emerald-100 text-emerald-800",
+};
+
 function formatDate(value: string) {
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
@@ -56,34 +53,25 @@ export default function AdminPage() {
 
   useEffect(() => {
     let isMounted = true;
-
     async function loadFeedback() {
       try {
         setError("");
         setIsLoading(true);
         const data = await GetFeedback();
-
-        if (isMounted) {
-          setFeedback(data ?? []);
-        }
+        if (isMounted) setFeedback(data ?? []);
       } catch (caughtError) {
         if (isMounted) {
-          const message =
+          setError(
             caughtError instanceof Error
               ? caughtError.message
-              : "Unable to load feedback.";
-          setError(message);
-          console.error("Admin feedback fetch failed:", caughtError);
+              : "Unable to load feedback.",
+          );
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
-
     loadFeedback();
-
     return () => {
       isMounted = false;
     };
@@ -92,161 +80,136 @@ export default function AdminPage() {
   const stats = useMemo(
     () => ({
       total: feedback.length,
-      pending: feedback.filter((item) => item.status === "pending").length,
-      reviewed: feedback.filter((item) => item.status === "reviewed").length,
-      resolved: feedback.filter((item) => item.status === "resolved").length,
+      pending: feedback.filter((i) => i.status === "pending").length,
+      reviewed: feedback.filter((i) => i.status === "reviewed").length,
+      resolved: feedback.filter((i) => i.status === "resolved").length,
     }),
     [feedback],
   );
 
   const visibleFeedback = useMemo(() => {
-    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     const statusOrder: Record<Feedback["status"], number> = {
       pending: 0,
       reviewed: 1,
       resolved: 2,
     };
-
     return feedback
       .filter((item) => {
-        const matchesSearch =
-          normalizedSearch.length === 0 ||
-          item.subject.toLowerCase().includes(normalizedSearch) ||
-          item.message.toLowerCase().includes(normalizedSearch);
-        const matchesStatus =
-          statusFilter === "all" || item.status === statusFilter;
-        const matchesCategory =
-          categoryFilter === "all" || item.category === categoryFilter;
-
-        return matchesSearch && matchesStatus && matchesCategory;
-      })
-      .toSorted((first, second) => {
-        if (sortOption === "oldest") {
-          return (
-            new Date(first.timestamp).getTime() -
-            new Date(second.timestamp).getTime()
-          );
-        }
-
-        if (sortOption === "rating-high") {
-          return second.rating - first.rating;
-        }
-
-        if (sortOption === "rating-low") {
-          return first.rating - second.rating;
-        }
-
-        if (sortOption === "status") {
-          return statusOrder[first.status] - statusOrder[second.status];
-        }
-
+        const matchSearch =
+          !q ||
+          item.subject.toLowerCase().includes(q) ||
+          item.message.toLowerCase().includes(q);
         return (
-          new Date(second.timestamp).getTime() -
-          new Date(first.timestamp).getTime()
+          matchSearch &&
+          (statusFilter === "all" || item.status === statusFilter) &&
+          (categoryFilter === "all" || item.category === categoryFilter)
+        );
+      })
+      .toSorted((a, b) => {
+        if (sortOption === "oldest")
+          return (
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+        if (sortOption === "rating-high") return b.rating - a.rating;
+        if (sortOption === "rating-low") return a.rating - b.rating;
+        if (sortOption === "status")
+          return statusOrder[a.status] - statusOrder[b.status];
+        return (
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
       });
-  }, [categoryFilter, feedback, searchQuery, sortOption, statusFilter]);
+  }, [feedback, searchQuery, statusFilter, categoryFilter, sortOption]);
 
   async function handleStatusChange(
     feedbackItem: Feedback,
     nextStatus: Feedback["status"],
   ) {
-    if (feedbackItem.status === nextStatus) {
-      return;
-    }
-
+    if (feedbackItem.status === nextStatus) return;
     const previousStatus = feedbackItem.status;
     setActionError("");
     setIsUpdatingId(feedbackItem.id);
-
-    setFeedback((current) =>
-      current.map((item) =>
-        item.id === feedbackItem.id ? { ...item, status: nextStatus } : item,
+    setFeedback((c) =>
+      c.map((i) =>
+        i.id === feedbackItem.id ? { ...i, status: nextStatus } : i,
       ),
     );
-
     try {
-      const updatedFeedback = await UpdateFeedbackStatus(
-        feedbackItem.id,
-        nextStatus,
-      );
-
-      setFeedback((current) =>
-        current.map((item) =>
-          item.id === updatedFeedback.id ? updatedFeedback : item,
-        ),
-      );
+      const updated = await UpdateFeedbackStatus(feedbackItem.id, nextStatus);
+      setFeedback((c) => c.map((i) => (i.id === updated.id ? updated : i)));
     } catch (caughtError) {
-      setFeedback((current) =>
-        current.map((item) =>
-          item.id === feedbackItem.id
-            ? { ...item, status: previousStatus }
-            : item,
+      setFeedback((c) =>
+        c.map((i) =>
+          i.id === feedbackItem.id ? { ...i, status: previousStatus } : i,
         ),
       );
-
-      const message =
+      setActionError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to update feedback status.";
-      setActionError(message);
-      console.error("Admin feedback update failed:", caughtError);
+          : "Unable to update feedback status.",
+      );
     } finally {
       setIsUpdatingId(null);
     }
   }
 
+  const inputCls =
+    "h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-300 font-[inherit]";
+
   return (
-    <main className="min-h-screen bg-[#eef3f4] px-6 py-10 text-slate-950">
-      <section className="mx-auto w-full max-w-6xl">
-        <div className="mb-8 rounded-lg border border-teal-900/10 bg-white p-6 shadow-sm">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-700">
-              Admin Console
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
-              Manage feedback
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Review submitted feedback, filter the queue, and update status as
-              items move forward.
-            </p>
-          </div>
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 lg:py-12 text-slate-950">
+      <section className="mx-auto w-full max-w-7xl">
+        {/* Header */}
+        <div className="mb-10 lg:mb-12">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+            Admin Console
+          </p>
+          <h1 className="mb-3 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-950">
+            Manage feedback
+          </h1>
+          <p className="max-w-2xl text-base sm:text-lg text-slate-600">
+            Review submissions, filter the queue, and update status as items
+            progress through the workflow.
+          </p>
         </div>
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Total</p>
-            <p className="mt-2 text-3xl font-semibold">{stats.total}</p>
-          </div>
-          <div className="rounded-lg border border-amber-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Pending</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700">
-              {stats.pending}
-            </p>
-          </div>
-          <div className="rounded-lg border border-sky-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Reviewed</p>
-            <p className="mt-2 text-3xl font-semibold text-sky-700">
-              {stats.reviewed}
-            </p>
-          </div>
-          <div className="rounded-lg border border-emerald-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Resolved</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700">
-              {stats.resolved}
-            </p>
-          </div>
+        {/* Stats */}
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+          {[
+            { label: "Total", value: stats.total, color: "text-slate-950" },
+            { label: "Pending", value: stats.pending, color: "text-amber-700" },
+            { label: "Reviewed", value: stats.reviewed, color: "text-sky-700" },
+            {
+              label: "Resolved",
+              value: stats.resolved,
+              color: "text-emerald-700",
+            },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-lg border border-slate-200 bg-white p-6 sm:p-7 lg:p-8 shadow-sm hover:shadow-md transition"
+            >
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                {label}
+              </p>
+              <p
+                className={`text-4xl sm:text-5xl lg:text-6xl font-bold leading-none tracking-tight ${color}`}
+              >
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        {/* Filters */}
+        <div className="mb-8 rounded-lg border border-slate-200 bg-white p-6 sm:p-7 lg:p-8 shadow-sm">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">
+              <p className="text-sm font-semibold text-slate-900">
                 Filter queue
-              </h2>
+              </p>
               <p className="mt-1 text-sm text-slate-600">
-                Showing {visibleFeedback.length} of {feedback.length} items.
+                Showing {visibleFeedback.length} of {feedback.length} items
               </p>
             </div>
             <button
@@ -257,17 +220,17 @@ export default function AdminPage() {
                 setCategoryFilter("all");
                 setSortOption("newest");
               }}
-              className="h-9 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+              className="h-10 px-4 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 bg-white transition hover:bg-slate-50 active:bg-slate-100"
             >
-              Reset
+              Reset filters
             </button>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div className="grid gap-4 sm:gap-5 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
             <div>
               <label
                 htmlFor="search"
-                className="block text-sm font-medium text-slate-800"
+                className="mb-2 block text-sm font-semibold text-slate-900"
               >
                 Search
               </label>
@@ -275,26 +238,26 @@ export default function AdminPage() {
                 id="search"
                 type="search"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
-                placeholder="Search subject or message"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search subject or message..."
+                className={inputCls}
               />
             </div>
 
             <div>
               <label
                 htmlFor="status-filter"
-                className="block text-sm font-medium text-slate-800"
+                className="mb-2 block text-sm font-semibold text-slate-900"
               >
                 Status
               </label>
               <select
                 id="status-filter"
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as StatusFilter)
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
                 }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+                className={inputCls}
               >
                 <option value="all">All statuses</option>
                 <option value="pending">Pending</option>
@@ -306,22 +269,22 @@ export default function AdminPage() {
             <div>
               <label
                 htmlFor="category-filter"
-                className="block text-sm font-medium text-slate-800"
+                className="mb-2 block text-sm font-semibold text-slate-900"
               >
                 Category
               </label>
               <select
                 id="category-filter"
                 value={categoryFilter}
-                onChange={(event) =>
-                  setCategoryFilter(event.target.value as CategoryFilter)
+                onChange={(e) =>
+                  setCategoryFilter(e.target.value as CategoryFilter)
                 }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+                className={inputCls}
               >
                 <option value="all">All categories</option>
-                {Object.entries(categoryLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+                {Object.entries(categoryLabels).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
                   </option>
                 ))}
               </select>
@@ -330,17 +293,15 @@ export default function AdminPage() {
             <div>
               <label
                 htmlFor="sort"
-                className="block text-sm font-medium text-slate-800"
+                className="mb-2 block text-sm font-semibold text-slate-900"
               >
                 Sort
               </label>
               <select
                 id="sort"
                 value={sortOption}
-                onChange={(event) =>
-                  setSortOption(event.target.value as SortOption)
-                }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+                onChange={(e) => setSortOption(e.target.value as SortOption)}
+                className={inputCls}
               >
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
@@ -351,102 +312,123 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {actionError ? (
-            <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {actionError && (
+            <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {actionError}
-            </p>
-          ) : null}
+            </div>
+          )}
         </div>
 
+        {/* List */}
         {isLoading ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
-            Loading feedback...
+          <div className="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <p className="text-base text-slate-600">Loading feedback...</p>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-red-100 bg-red-50 p-5 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-base text-red-700">
             {error}
           </div>
         ) : feedback.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <div className="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <h2 className="text-2xl font-semibold text-slate-900">
               No feedback yet
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-3 text-base text-slate-600">
               Submitted feedback will appear here once it is available.
             </p>
           </div>
         ) : visibleFeedback.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <div className="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <h2 className="text-2xl font-semibold text-slate-900">
               No matching feedback
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Adjust the search, filters, or sort settings to widen the list.
+            <p className="mt-3 text-base text-slate-600">
+              Adjust the filters to widen the list.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4 sm:space-y-5">
             {visibleFeedback.map((item) => (
               <article
                 key={item.id}
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-200 hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md"
               >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold text-slate-950">
-                        {item.subject}
-                      </h2>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ${statusStyles[item.status]}`}
-                      >
-                        {statusLabels[item.status]}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {item.message}
-                    </p>
+                <div className="p-5 sm:p-6 lg:p-7">
+                  {/* Top Section */}
+                  <div className="flex flex-col gap-5">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <h3 className="text-[1.05rem] font-bold leading-tight text-slate-950 sm:text-[1.2rem]">
+                            {item.subject}
+                          </h3>
 
-                    <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {categoryLabels[item.category]}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {formatDate(item.timestamp)}
-                      </span>
-                    </div>
-                  </div>
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusBadge[item.status]}`}
+                          >
+                            {statusLabels[item.status]}
+                          </span>
+                        </div>
 
-                  <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end">
-                    <div className="flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1.5 text-sm font-medium text-slate-700">
-                      {item.rating}/5
+                        <p className="text-[15px] leading-relaxed text-slate-700 sm:text-base">
+                          {item.message}
+                        </p>
+                      </div>
+
+                      {/* Rating */}
+                      <div className="shrink-0">
+                        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                          <Star className="h-4 w-4 fill-current" />
+                          {item.rating}/5
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="w-full sm:w-44 lg:w-48">
-                      <label
-                        htmlFor={`status-${item.id}`}
-                        className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500"
-                      >
-                        Update status
-                      </label>
-                      <select
-                        id={`status-${item.id}`}
-                        value={item.status}
-                        disabled={isUpdatingId === item.id}
-                        onChange={(event) =>
-                          handleStatusChange(
-                            item,
-                            event.target.value as Feedback["status"],
-                          )
-                        }
-                        className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10 disabled:cursor-not-allowed disabled:bg-slate-100"
-                      >
-                        {statusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {statusLabels[status]}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Divider */}
+                    <div className="h-px bg-slate-100" />
+
+                    {/* Bottom Section */}
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      {/* Metadata */}
+                      <div className="flex flex-wrap items-center gap-3 text-[13px] text-slate-500">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+                          {categoryLabels[item.category]}
+                        </span>
+
+                        <span className="hidden sm:block text-slate-300">
+                          •
+                        </span>
+                      </div>
+
+                      {/* Status Update */}
+                      <div className="w-full sm:w-[220px]">
+                        <label
+                          htmlFor={`status-${item.id}`}
+                          className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"
+                        >
+                          Update Status
+                        </label>
+
+                        <select
+                          id={`status-${item.id}`}
+                          value={item.status}
+                          disabled={isUpdatingId === item.id}
+                          onChange={(e) =>
+                            handleStatusChange(
+                              item,
+                              e.target.value as Feedback["status"],
+                            )
+                          }
+                          className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                        >
+                          {statusOptions.map((s) => (
+                            <option key={s} value={s}>
+                              {statusLabels[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>

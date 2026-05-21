@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Login, SignIn } from "@/src/lib/auth";
-import { Eye, EyeClosed } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { AuthResponse } from "@/types";
 import { useRouter } from "next/navigation";
 
@@ -28,33 +28,19 @@ export default function Home() {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
-
     try {
       if (authMode === "create") {
         const result = await SignIn(username, password);
-        if (result.user.is_staff) {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
+        router.push(result.user.is_staff ? "/admin" : "/dashboard");
         return;
       }
-
       const result = (await Login(username, password)) as AuthResponse;
-      if (result.user.is_staff) {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(result.user.is_staff ? "/admin" : "/dashboard");
     } catch (caughtError) {
-      const message =
+      setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to sign in. Please try again.";
-      setError(message);
-      console.error(
-        authMode === "create" ? "Create account failed:" : "Login failed:",
-        caughtError,
+          : "Unable to sign in. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -62,121 +48,121 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-[#f4f6f8] px-6 py-12 text-slate-950">
-      <section className="w-full max-w-[420px]">
-        <div className="mb-8">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-700">
-            Student Feedback
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            {authMode === "create" ? "Create account" : "Sign in"}
+    <main className="flex min-h-screen items-center justify-center bg-[#f5f4f0] px-6 py-12">
+      <section className="w-full max-w-[480px]">
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <h1 className="text-[2rem] font-bold tracking-tight text-[#111] leading-tight">
+            Student
+            <span className="block">Feedback Portal</span>
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 text-sm text-[#888]">
             {authMode === "create"
-              ? "Create your school account to start submitting feedback."
-              : "Access the feedback dashboard with your school account."}
+              ? "Create your account to continue to the feedback dashboard."
+              : "Sign in to continue to your dashboard."}
           </p>
         </div>
 
+        {/* Card */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          className="rounded-[20px] border border-[#e8e6e0] bg-white p-8"
         >
-          <div className="mb-6 grid grid-cols-2 rounded-md bg-slate-100 p-1">
+          {/* Auth Switch */}
+          <div className="mb-7 grid grid-cols-2 rounded-xl bg-[#f0ede8] p-1">
             <button
               type="button"
               onClick={() => switchAuthMode("login")}
-              className={`h-9 rounded-[5px] text-sm font-medium transition ${
+              className={`h-10 rounded-[9px] text-sm font-medium transition-all ${
                 authMode === "login"
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-600 hover:text-slate-950"
+                  ? "border border-[#e0ddd7] bg-white text-[#111]"
+                  : "text-[#999]"
               }`}
             >
-              Sign in
+              Sign In
             </button>
             <button
               type="button"
               onClick={() => switchAuthMode("create")}
-              className={`h-9 rounded-[5px] text-sm font-medium transition ${
+              className={`h-10 rounded-[9px] text-sm font-medium transition-all ${
                 authMode === "create"
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-600 hover:text-slate-950"
+                  ? "border border-[#e0ddd7] bg-white text-[#111]"
+                  : "text-[#999]"
               }`}
             >
-              Create
+              Create Account
             </button>
           </div>
 
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-slate-800"
-          >
-            Username
-          </label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            required
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
-            placeholder="Enter username"
-          />
-
-          <label
-            htmlFor="password"
-            className="mt-5 block text-sm font-medium text-slate-800"
-          >
-            Password
-          </label>
-          <div className="relative mt-2">
+          {/* Username */}
+          <div className="mb-5">
+            <label className="mb-2 block text-[13px] font-medium text-[#555]">
+              Username
+            </label>
             <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
+              type="text"
               required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 pr-11 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
-              placeholder="Enter password"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              className="h-12 w-full rounded-xl border border-[#e0ddd7] bg-[#faf9f7] px-4 text-[15px] text-[#111] outline-none transition-all placeholder:text-[#bbb] focus:border-[#bbb] focus:bg-white"
             />
-            <button
-              type="button"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              aria-pressed={showPassword}
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-slate-500 transition hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-teal-700/10"
-            >
-              {showPassword ? <Eye /> : <EyeClosed className="h-5 w-5" />}
-            </button>
           </div>
 
-          {error ? (
-            <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          ) : null}
+          {/* Password */}
+          <div>
+            <label className="mb-2 block text-[13px] font-medium text-[#555]">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="h-12 w-full rounded-xl border border-[#e0ddd7] bg-[#faf9f7] px-4 pr-12 text-[15px] text-[#111] outline-none transition-all placeholder:text-[#bbb] focus:border-[#bbb] focus:bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#aaa] transition hover:text-[#555]"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-[18px] w-[18px]" />
+                ) : (
+                  <Eye className="h-[18px] w-[18px]" />
+                )}
+              </button>
+            </div>
+          </div>
 
+          {/* Error */}
+          {error && (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="mt-6 flex h-11 w-full items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="mt-7 h-12 w-full rounded-xl bg-[#111] text-[15px] font-semibold text-white transition hover:bg-[#222] disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isSubmitting
               ? authMode === "create"
-                ? "Creating..."
-                : "Signing in..."
+                ? "Creating Account..."
+                : "Signing In..."
               : authMode === "create"
-                ? "Create account"
-                : "Sign in"}
+                ? "Create Account"
+                : "Sign In"}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-xs leading-5 text-slate-500">
-          Feedback tools for faculty, students, and administrators.
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-[#bbb]">
+          Secure feedback management system for students and faculty.
         </p>
       </section>
     </main>

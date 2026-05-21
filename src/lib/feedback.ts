@@ -60,3 +60,25 @@ export async function UpdateFeedbackStatus(
 
   return data;
 }
+
+export async function UpdateFeedback(
+  id: number,
+  feedback: CreateFeedbackPayload,
+): Promise<Feedback> {
+  const response = await fetchWithAuth(`${SERVER_URL}api/feedbacks/${id}/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(feedback),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      data.error || `Feedback update failed: ${response.statusText}`,
+    );
+  }
+
+  return data;
+}
