@@ -39,3 +39,24 @@ export async function CreateFeedback(
   return data;
 }
 
+export async function UpdateFeedbackStatus(
+  id: number,
+  status: Feedback["status"],
+): Promise<Feedback> {
+  const response = await fetchWithAuth(`${SERVER_URL}api/feedbacks/${id}/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ status }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      data.error || `Feedback update failed: ${response.statusText}`,
+    );
+  }
+
+  return data;
+}
