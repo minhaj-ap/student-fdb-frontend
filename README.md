@@ -1,23 +1,135 @@
-create a login page with 2 fields username and password and pass it to the backend for validation
+# Student Feedback — Frontend
 
-if user.is_staff is false then redirec tto /dasshboard
-if not then to /admin
+Student feedback portal built with Next.js and Tailwind CSS.
 
-on dashboard user should be able to see his feedbacks, theri status and basic filtering options needs to be provided.
-there will be a form whcih takes subject as text, categry as dropdwon (hardcoded) , rating, message
+The application provides a compact feedback management system for both students and administrators/reviewers.
 
-on admin page admin will have options to update status of the feedbacks
+---
 
-need to setup a midleware to ensure only authenticated suers enter /admin and /dashboard
+## Application Structure
 
-AUTH:
-- 2 tokens will be passed and as of now theyre ebing stored on cookie
-- create and login uses the same endpoint
+The frontend is divided into two protected application areas:
 
-the endpoints are SERVER_URL api/token to login
-api/token/refresh to refresh access token
-api/feedback to get all feedback of the logged user
-api/feedback/:id to get only one feedback
-api/feedback/:id on DELETE to delte feedback
-api/feedback/:id on PUT to update values
-api/feedback on POST to create feedback
+### `/dashboard`
+
+Student-facing dashboard.
+
+Authenticated users can:
+
+* Create feedback
+* View their submitted feedback
+* Edit feedback
+* Delete feedback
+* Track feedback status
+
+Each dashboard session is scoped to the currently authenticated user.
+
+---
+
+### `/admin`
+
+Administrator/reviewer panel.
+
+Only authorized admin users can access this route.
+
+Admins can:
+
+* View all submitted feedback
+* Review feedback entries
+* Mark issues as resolved
+
+---
+
+## Route Protection & Authentication
+
+The application uses JWT-based authentication with protected routing.
+
+### Authentication Flow
+
+* Users authenticate through the backend API.
+* JWT tokens are stored securely using HTTP-only cookies.
+* Protected routes validate the authenticated session before rendering content.
+
+---
+
+## Middleware-Based Protection
+
+A centralized `proxy` middleware is used to protect sensitive routes.
+
+The middleware:
+
+* Intercepts incoming requests
+* Ensures a proper access token exists
+* Redirects unauthenticated users if not
+
+Protected routes include:
+
+```txt
+/admin
+/dashboard
+```
+
+---
+
+## Layout-Level Authorization
+
+Both route groups contain dedicated `layout.tsx` files responsible for:
+
+* Authentication checks
+* Session validation
+* Role-based access control
+
+### Admin Layout
+
+Handles:
+
+* Admin-only access validation
+* Reviewer session management
+
+### Dashboard Layout
+
+Handles:
+
+* Logged-in user validation
+* User session persistence
+
+---
+
+## Tech Stack
+
+* Next.js App Router
+* Tailwind CSS
+* TypeScript
+* JWT Authentication
+* Middleware-based Route Protection
+
+---
+
+## Quick Links
+
+* Dashboard page: `app/dashboard/page.tsx`
+* API helpers: `src/lib`
+* Shared types: `types.ts`
+
+---
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run development server:
+
+```bash
+npm run dev
+```
+
+Build production version:
+
+```bash
+npm run build
+npm run start
+```
