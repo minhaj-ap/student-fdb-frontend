@@ -16,6 +16,14 @@ export default function Home() {
 
   const router = useRouter();
 
+  function switchAuthMode(nextMode: "login" | "create") {
+    setAuthMode(nextMode);
+    setUsername("");
+    setPassword("");
+    setShowPassword(false);
+    setError("");
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -77,10 +85,7 @@ export default function Home() {
           <div className="mb-6 grid grid-cols-2 rounded-md bg-slate-100 p-1">
             <button
               type="button"
-              onClick={() => {
-                setAuthMode("login");
-                setError("");
-              }}
+              onClick={() => switchAuthMode("login")}
               className={`h-9 rounded-[5px] text-sm font-medium transition ${
                 authMode === "login"
                   ? "bg-white text-slate-950 shadow-sm"
@@ -91,10 +96,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setAuthMode("create");
-                setError("");
-              }}
+              onClick={() => switchAuthMode("create")}
               className={`h-9 rounded-[5px] text-sm font-medium transition ${
                 authMode === "create"
                   ? "bg-white text-slate-950 shadow-sm"

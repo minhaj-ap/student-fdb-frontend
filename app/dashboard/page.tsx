@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { CreateFeedback, GetFeedback } from "@/src/lib/feedback";
 import { CreateFeedbackPayload, Feedback } from "@/types";
 
+type StatusFilter = Feedback["status"] | "all";
+type CategoryFilter = Feedback["category"] | "all";
+type SortOption = "newest" | "oldest" | "rating-high" | "rating-low" | "status";
+
 const statusStyles: Record<Feedback["status"], string> = {
   pending: "bg-amber-50 text-amber-700 ring-amber-200",
   reviewed: "bg-sky-50 text-sky-700 ring-sky-200",
@@ -43,6 +47,10 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +96,54 @@ export default function DashboardPage() {
     [feedback],
   );
 
+  const visibleFeedback = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const statusOrder: Record<Feedback["status"], number> = {
+      pending: 0,
+      reviewed: 1,
+      resolved: 2,
+    };
+
+    return feedback
+      .filter((item) => {
+        const matchesSearch =
+          normalizedSearch.length === 0 ||
+          item.subject.toLowerCase().includes(normalizedSearch) ||
+          item.message.toLowerCase().includes(normalizedSearch);
+        const matchesStatus =
+          statusFilter === "all" || item.status === statusFilter;
+        const matchesCategory =
+          categoryFilter === "all" || item.category === categoryFilter;
+
+        return matchesSearch && matchesStatus && matchesCategory;
+      })
+      .toSorted((first, second) => {
+        if (sortOption === "oldest") {
+          return (
+            new Date(first.timestamp).getTime() -
+            new Date(second.timestamp).getTime()
+          );
+        }
+
+        if (sortOption === "rating-high") {
+          return second.rating - first.rating;
+        }
+
+        if (sortOption === "rating-low") {
+          return first.rating - second.rating;
+        }
+
+        if (sortOption === "status") {
+          return statusOrder[first.status] - statusOrder[second.status];
+        }
+
+        return (
+          new Date(second.timestamp).getTime() -
+          new Date(first.timestamp).getTime()
+        );
+      });
+  }, [categoryFilter, feedback, searchQuery, sortOption, statusFilter]);
+
   async function handleCreateFeedback(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
@@ -115,14 +171,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f6f8] px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-[#eef3f4] px-6 py-10 text-slate-950">
       <section className="mx-auto w-full max-w-6xl">
-        <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="mb-8 rounded-lg border border-teal-900/10 bg-white p-6 shadow-sm">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-700">
               Student Feedback
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
               Your feedback
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
@@ -137,13 +193,17 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500">Total</p>
             <p className="mt-2 text-3xl font-semibold">{stats.total}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-amber-100 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Pending</p>
-            <p className="mt-2 text-3xl font-semibold">{stats.pending}</p>
+            <p className="mt-2 text-3xl font-semibold text-amber-700">
+              {stats.pending}
+            </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-emerald-100 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Resolved</p>
-            <p className="mt-2 text-3xl font-semibold">{stats.resolved}</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700">
+              {stats.resolved}
+            </p>
           </div>
         </div>
 
@@ -275,6 +335,119 @@ export default function DashboardPage() {
           </button>
         </form>
 
+        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Browse feedback
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Showing {visibleFeedback.length} of {feedback.length} items.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("all");
+                setCategoryFilter("all");
+                setSortOption("newest");
+              }}
+              className="h-9 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              Reset
+            </button>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+            <div>
+              <label
+                htmlFor="search"
+                className="block text-sm font-medium text-slate-800"
+              >
+                Search
+              </label>
+              <input
+                id="search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+                placeholder="Search subject or message"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-medium text-slate-800"
+              >
+                Status
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilter)
+                }
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+              >
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="category-filter"
+                className="block text-sm font-medium text-slate-800"
+              >
+                Category
+              </label>
+              <select
+                id="category-filter"
+                value={categoryFilter}
+                onChange={(event) =>
+                  setCategoryFilter(event.target.value as CategoryFilter)
+                }
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+              >
+                <option value="all">All categories</option>
+                {Object.entries(categoryLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="sort"
+                className="block text-sm font-medium text-slate-800"
+              >
+                Sort
+              </label>
+              <select
+                id="sort"
+                value={sortOption}
+                onChange={(event) =>
+                  setSortOption(event.target.value as SortOption)
+                }
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-700/10"
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="rating-high">Highest rating</option>
+                <option value="rating-low">Lowest rating</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
             Loading feedback...
@@ -292,12 +465,21 @@ export default function DashboardPage() {
               Submitted feedback will appear here once it is available.
             </p>
           </div>
+        ) : visibleFeedback.length === 0 ? (
+          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">
+              No matching feedback
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Adjust the search, filters, or sort settings to widen the list.
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {feedback.map((item) => (
+            {visibleFeedback.map((item) => (
               <article
                 key={item.id}
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-200 hover:shadow-md"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
