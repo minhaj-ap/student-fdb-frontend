@@ -13,7 +13,8 @@ export type AuthResponse = {
 export type Feedback = {
   subject: string;
   message: string;
-  timestamp: string;
+  updated_at: string;
+  created_at: string;
   status: "pending" | "reviewed" | "resolved";
   category: "academics" | "infrastructure" | "activities" | "other";
   rating: number;

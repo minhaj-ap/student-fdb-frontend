@@ -139,14 +139,14 @@ export default function DashboardPage() {
       .toSorted((a, b) => {
         if (sortOption === "oldest")
           return (
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
           );
         if (sortOption === "rating-high") return b.rating - a.rating;
         if (sortOption === "rating-low") return a.rating - b.rating;
         if (sortOption === "status")
           return statusOrder[a.status] - statusOrder[b.status];
         return (
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
       });
   }, [feedback, searchQuery, statusFilter, categoryFilter, sortOption]);
