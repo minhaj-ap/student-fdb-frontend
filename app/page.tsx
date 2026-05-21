@@ -24,7 +24,11 @@ export default function Home() {
     try {
       if (authMode === "create") {
         const result = await SignIn(username, password);
-        console.log("Account created:", result);
+        if (result.user.is_staff) {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
         return;
       }
 
@@ -34,7 +38,6 @@ export default function Home() {
       } else {
         router.push("/dashboard");
       }
-      console.log("Login successful:", result);
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
