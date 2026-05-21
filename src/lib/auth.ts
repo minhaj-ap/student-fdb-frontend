@@ -13,12 +13,27 @@ export async function Login(
     credentials: "include",
     body: JSON.stringify({ username, password }),
   });
-
+  const data = await response.json();
   if (!response.ok) {
-    throw new Error(`Login failed: ${response.statusText}`);
+    throw new Error(data.error || `Login failed: ${response.statusText}`);
   }
 
+  return data;
+}
+
+export async function SignIn(username: string, password: string) {
+  const response = await fetch(`${SERVER_URL}api/register/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ username, password }),
+  });
   const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || `Sign-up failed: ${response.statusText}`);
+  }
 
   return data;
 }

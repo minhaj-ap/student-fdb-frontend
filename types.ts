@@ -9,3 +9,18 @@ export type AuthResponse = {
     is_staff: boolean;
   };
 };
+
+export type Feedback = {
+  subject: string;
+  message: string;
+  timestamp: string;
+  status: "pending" | "reviewed" | "resolved";
+  category: "academics" | "infrastructure" | "activities" | "other";
+  rating: number;
+  id: number;
+};
+
+export type CreateFeedbackPayload = Pick<
+  Feedback,
+  "subject" | "message" | "category" | "rating"
+>;

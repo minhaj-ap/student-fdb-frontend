@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Login } from "@/src/lib/auth";
+import { Login, SignIn } from "@/src/lib/auth";
 import { Eye, EyeClosed } from "lucide-react";
 import { AuthResponse } from "@/types";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const [authMode, setAuthMode] = useState<"login" | "create">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,19 +22,29 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
+      if (authMode === "create") {
+        const result = await SignIn(username, password);
+        console.log("Account created:", result);
+        return;
+      }
+
       const result = (await Login(username, password)) as AuthResponse;
       if (result.user.is_staff) {
         router.push("/admin");
       } else {
         router.push("/dashboard");
       }
+      console.log("Login successful:", result);
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to sign in. Please try again.";
       setError(message);
-      console.error("Login failed:", caughtError);
+      console.error(
+        authMode === "create" ? "Create account failed:" : "Login failed:",
+        caughtError,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -47,10 +58,12 @@ export default function Home() {
             Student Feedback
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            Sign in or Create one
+            {authMode === "create" ? "Create account" : "Sign in"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Access the feedback dashboard with your school account.
+            {authMode === "create"
+              ? "Create your school account to start submitting feedback."
+              : "Access the feedback dashboard with your school account."}
           </p>
         </div>
 
@@ -58,6 +71,37 @@ export default function Home() {
           onSubmit={handleSubmit}
           className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
         >
+          <div className="mb-6 grid grid-cols-2 rounded-md bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setError("");
+              }}
+              className={`h-9 rounded-[5px] text-sm font-medium transition ${
+                authMode === "login"
+                  ? "bg-white text-slate-950 shadow-sm"
+                  : "text-slate-600 hover:text-slate-950"
+              }`}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("create");
+                setError("");
+              }}
+              className={`h-9 rounded-[5px] text-sm font-medium transition ${
+                authMode === "create"
+                  ? "bg-white text-slate-950 shadow-sm"
+                  : "text-slate-600 hover:text-slate-950"
+              }`}
+            >
+              Create
+            </button>
+          </div>
+
           <label
             htmlFor="username"
             className="block text-sm font-medium text-slate-800"
@@ -116,7 +160,13 @@ export default function Home() {
             disabled={isSubmitting}
             className="mt-6 flex h-11 w-full items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting
+              ? authMode === "create"
+                ? "Creating..."
+                : "Signing in..."
+              : authMode === "create"
+                ? "Create account"
+                : "Sign in"}
           </button>
         </form>
 
