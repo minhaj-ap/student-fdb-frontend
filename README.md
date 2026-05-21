@@ -14,8 +14,8 @@ AUTH:
 - 2 tokens will be passed and as of now theyre ebing stored on cookie
 - create and login uses the same endpoint
 
-the endpoints are SERVER_URL/token to login
-/token/refresh to refresh access token
+the endpoints are SERVER_URL api/token to login
+api/token/refresh to refresh access token
 /feedback to get all feedback of the logged user
 /feedback/:id to get only one feedback
 /feedback/:id on DELETE to delte feedback
