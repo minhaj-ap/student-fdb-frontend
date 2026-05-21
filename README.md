@@ -1,36 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+create a login page with 2 fields username and password and pass it to the backend for validation
 
-## Getting Started
+if user.is_staff is false then redirec tto /dasshboard
+if not then to /admin
 
-First, run the development server:
+on dashboard user should be able to see his feedbacks, theri status and basic filtering options needs to be provided.
+there will be a form whcih takes subject as text, categry as dropdwon (hardcoded) , rating, message
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+on admin page admin will have options to update status of the feedbacks
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+need to setup a midleware to ensure only authenticated suers enter /admin and /dashboard
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+AUTH:
+- 2 tokens will be passed and as of now theyre ebing stored on cookie
+- create and login uses the same endpoint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+the endpoints are SERVER_URL/token to login
+/token/refresh to refresh access token
+/feedback to get all feedback of the logged user
+/feedback/:id to get only one feedback
+/feedback/:id on DELETE to delte feedback
+/feedback/:id on PUT to update values
+/feedback on POST to create feedback
