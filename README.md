@@ -16,8 +16,8 @@ AUTH:
 
 the endpoints are SERVER_URL api/token to login
 api/token/refresh to refresh access token
-/feedback to get all feedback of the logged user
-/feedback/:id to get only one feedback
-/feedback/:id on DELETE to delte feedback
-/feedback/:id on PUT to update values
-/feedback on POST to create feedback
+api/feedback to get all feedback of the logged user
+api/feedback/:id to get only one feedback
+api/feedback/:id on DELETE to delte feedback
+api/feedback/:id on PUT to update values
+api/feedback on POST to create feedback
