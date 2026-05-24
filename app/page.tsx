@@ -10,6 +10,7 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<"login" | "create">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +31,7 @@ export default function Home() {
     setIsSubmitting(true);
     try {
       if (authMode === "create") {
-        const result = await SignIn(username, password);
+        const result = await SignIn(username, email,password);
         router.push(result.user.is_staff ? "/admin" : "/dashboard");
         return;
       }
@@ -108,6 +109,21 @@ export default function Home() {
               className="h-12 w-full rounded-xl border border-[#e0ddd7] bg-[#faf9f7] px-4 text-[15px] text-[#111] outline-none transition-all placeholder:text-[#bbb] focus:border-[#bbb] focus:bg-white"
             />
           </div>
+          {authMode === "create" && (
+            <div className="mb-5">
+              <label className="mb-2 block text-[13px] font-medium text-[#555]">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email"
+                className="h-12 w-full rounded-xl border border-[#e0ddd7] bg-[#faf9f7] px-4 text-[15px] text-[#111] outline-none transition-all placeholder:text-[#bbb] focus:border-[#bbb] focus:bg-white"
+              />
+            </div>
+          )}
 
           {/* Password */}
           <div>

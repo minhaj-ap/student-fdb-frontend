@@ -21,14 +21,21 @@ export async function Login(
   return data;
 }
 
-export async function SignIn(username: string, password: string) {
+export async function SignIn(
+  username: string,
+  email: string,
+  password: string,
+) {
+  if (!username || !email || !password) {
+    throw new Error("Username, email, and password are required.");
+  }
   const response = await fetch(`${SERVER_URL}api/register/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, email, password }),
   });
   const data = await response.json();
   if (!response.ok) {
